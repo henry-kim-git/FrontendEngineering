@@ -1,9 +1,10 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useReducer } from "react";
 import { Modal } from "@/src/components/Modal";
 import { nowLocalDateTime } from "@/src/planner";
 import type { IsoDate, LocalDateTime, Priority, TaskDraft } from "@/src/planner";
+import { taskModalReducer } from "@/src/hooks/taskModalReducer";
 
 export type TaskEditorState =
   | { mode: "create"; draft: TaskDraft }
@@ -18,18 +19,15 @@ interface TaskEditorModalProps {
 }
 
 export function TaskEditorModal({ title, initialDraft, isEditing, onClose, onSubmit }: TaskEditorModalProps) {
-  const [taskTitle, setTaskTitle] = useState(initialDraft.title);
-  const [dueDate, setDueDate] = useState<string>(initialDraft.dueDate);
-  const [priority, setPriority] = useState<Priority>(initialDraft.priority);
-  const [note, setNote] = useState(initialDraft.note);
-  const [reminderAt, setReminderAt] = useState(initialDraft.reminderAt ?? "");
+  const [draft, dispatch] = useReducer(taskModalReducer, initialDraft);
+  const { title: taskTitle, dueDate, priority, note, reminderAt } = draft;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!taskTitle.trim()) {
       return;
     }
-    onSubmit({ title: taskTitle, dueDate: dueDate as IsoDate, priority, note, reminderAt: (reminderAt || null) as LocalDateTime | null });
+    onSubmit({ ...draft, reminderAt: (reminderAt || null) as LocalDateTime | null });
   }
 
   return (
@@ -37,16 +35,30 @@ export function TaskEditorModal({ title, initialDraft, isEditing, onClose, onSub
       <form className="modal-form" onSubmit={submit}>
         <div className="field">
           <label htmlFor="task-title">제목</label>
-          <input id="task-title" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} autoFocus />
+          <input
+            id="task-title"
+            value={taskTitle}
+            onChange={(e) => dispatch({ type: "patch", patch: { title: e.target.value } })}
+            autoFocus
+          />
         </div>
         <div className="modal-form-grid">
           <div className="field">
             <label htmlFor="task-date">마감일</label>
-            <input id="task-date" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            <input
+              id="task-date"
+              type="date"
+              value={dueDate}
+              onChange={(e) => dispatch({ type: "patch", patch: { dueDate: e.target.value as IsoDate } })}
+            />
           </div>
           <div className="field">
             <label htmlFor="task-priority">우선순위</label>
-            <select id="task-priority" value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
+            <select
+              id="task-priority"
+              value={priority}
+              onChange={(e) => dispatch({ type: "patch", patch: { priority: e.target.value as Priority } })}
+            >
               <option value="high">높음</option>
               <option value="medium">보통</option>
               <option value="low">낮음</option>
@@ -59,13 +71,17 @@ export function TaskEditorModal({ title, initialDraft, isEditing, onClose, onSub
             id="task-reminder"
             type="datetime-local"
             min={isEditing && reminderAt ? reminderAt : nowLocalDateTime()}
-            value={reminderAt}
-            onChange={(e) => setReminderAt(e.target.value)}
+            value={reminderAt ?? ""}
+            onChange={(e) => dispatch({ type: "patch", patch: { reminderAt: (e.target.value || null) as LocalDateTime | null } })}
           />
         </div>
         <div className="field">
           <label htmlFor="task-note">메모</label>
-          <textarea id="task-note" value={note} onChange={(e) => setNote(e.target.value)} />
+          <textarea
+            id="task-note"
+            value={note}
+            onChange={(e) => dispatch({ type: "patch", patch: { note: e.target.value } })}
+          />
         </div>
         <div className="modal-footer">
           <button className="secondary-button" type="button" onClick={onClose}>

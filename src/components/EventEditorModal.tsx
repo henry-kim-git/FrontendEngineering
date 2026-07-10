@@ -1,9 +1,10 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useReducer } from "react";
 import { Modal } from "@/src/components/Modal";
 import { nowLocalDateTime } from "@/src/planner";
 import type { EventCategory, EventDraft, IsoDate, LocalDateTime } from "@/src/planner";
+import { eventModalReducer } from "@/src/hooks/eventModalReducer";
 
 export type EventEditorState =
   | { mode: "create"; draft: EventDraft }
@@ -18,13 +19,8 @@ interface EventEditorModalProps {
 }
 
 export function EventEditorModal({ title, initialDraft, isEditing, onClose, onSubmit }: EventEditorModalProps) {
-  const [name, setName] = useState(initialDraft.title);
-  const [date, setDate] = useState<string>(initialDraft.date);
-  const [startTime, setStartTime] = useState(initialDraft.startTime);
-  const [endTime, setEndTime] = useState(initialDraft.endTime);
-  const [category, setCategory] = useState<EventCategory>(initialDraft.category);
-  const [note, setNote] = useState(initialDraft.note);
-  const [reminderAt, setReminderAt] = useState(initialDraft.reminderAt ?? "");
+  const [draft, dispatch] = useReducer(eventModalReducer, initialDraft);
+  const { title: name, date, startTime, endTime, category, note, reminderAt } = draft;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,15 +28,7 @@ export function EventEditorModal({ title, initialDraft, isEditing, onClose, onSu
       return;
     }
 
-    onSubmit({
-      title: name,
-      date: date as IsoDate,
-      startTime,
-      endTime,
-      category,
-      note,
-      reminderAt: (reminderAt || null) as LocalDateTime | null
-    });
+    onSubmit({ ...draft, reminderAt: (reminderAt || null) as LocalDateTime | null });
   }
 
   return (
@@ -48,16 +36,30 @@ export function EventEditorModal({ title, initialDraft, isEditing, onClose, onSu
       <form className="modal-form" onSubmit={submit}>
         <div className="field">
           <label htmlFor="event-title">제목</label>
-          <input id="event-title" value={name} onChange={(event) => setName(event.target.value)} autoFocus />
+          <input
+            id="event-title"
+            value={name}
+            onChange={(event) => dispatch({ type: "patch", patch: { title: event.target.value } })}
+            autoFocus
+          />
         </div>
         <div className="modal-form-grid">
           <div className="field">
             <label htmlFor="event-date">날짜</label>
-            <input id="event-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+            <input
+              id="event-date"
+              type="date"
+              value={date}
+              onChange={(event) => dispatch({ type: "patch", patch: { date: event.target.value as IsoDate } })}
+            />
           </div>
           <div className="field">
             <label htmlFor="event-category">분류</label>
-            <select id="event-category" value={category} onChange={(event) => setCategory(event.target.value as EventCategory)}>
+            <select
+              id="event-category"
+              value={category}
+              onChange={(event) => dispatch({ type: "patch", patch: { category: event.target.value as EventCategory } })}
+            >
               <option value="work">업무</option>
               <option value="personal">개인</option>
               <option value="study">학습</option>
@@ -68,11 +70,21 @@ export function EventEditorModal({ title, initialDraft, isEditing, onClose, onSu
         <div className="modal-form-grid">
           <div className="field">
             <label htmlFor="event-start">시작</label>
-            <input id="event-start" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
+            <input
+              id="event-start"
+              type="time"
+              value={startTime}
+              onChange={(event) => dispatch({ type: "patch", patch: { startTime: event.target.value } })}
+            />
           </div>
           <div className="field">
             <label htmlFor="event-end">종료</label>
-            <input id="event-end" type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
+            <input
+              id="event-end"
+              type="time"
+              value={endTime}
+              onChange={(event) => dispatch({ type: "patch", patch: { endTime: event.target.value } })}
+            />
           </div>
         </div>
         <div className="field">
@@ -81,13 +93,17 @@ export function EventEditorModal({ title, initialDraft, isEditing, onClose, onSu
             id="event-reminder"
             type="datetime-local"
             min={isEditing && reminderAt ? reminderAt : nowLocalDateTime()}
-            value={reminderAt}
-            onChange={(event) => setReminderAt(event.target.value)}
+            value={reminderAt ?? ""}
+            onChange={(event) => dispatch({ type: "patch", patch: { reminderAt: (event.target.value || null) as LocalDateTime | null } })}
           />
         </div>
         <div className="field">
           <label htmlFor="event-note">메모</label>
-          <textarea id="event-note" value={note} onChange={(event) => setNote(event.target.value)} />
+          <textarea
+            id="event-note"
+            value={note}
+            onChange={(event) => dispatch({ type: "patch", patch: { note: event.target.value } })}
+          />
         </div>
         <div className="modal-footer">
           <button className="secondary-button" type="button" onClick={onClose}>
