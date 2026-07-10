@@ -2,9 +2,9 @@
 
 import { useEffect } from "react";
 
-export function useLocalStorageSync<T>(value: T | undefined, key: string): void {
+export function useLocalStorageSync<T>(value: T | undefined, save: (value: T) => void): void {
   useEffect(() => {
     if (value === undefined) return;
-    window.localStorage.setItem(key, JSON.stringify(value));
-  }, [value, key]);
+    save(value);
+  }, [value, save]);
 }
