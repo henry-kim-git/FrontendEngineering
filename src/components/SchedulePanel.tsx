@@ -5,6 +5,7 @@ import { EventEditorModal } from "@/src/components/EventEditorModal";
 import type { EventEditorState } from "@/src/components/EventEditorModal";
 import { CATEGORY_LABEL, eventToDraft, formatDate, getEventsForDate, makeDefaultEventDraft } from "@/src/planner";
 import type { EventDraft, IsoDate, ScheduleEvent } from "@/src/planner";
+import { EntryList, EntryRow } from "@/src/components/EntryList";
 
 interface SchedulePanelProps {
   selectedDate: IsoDate;
@@ -42,37 +43,33 @@ export function SchedulePanel({ selectedDate, events, onAddEvent, onUpdateEvent,
         </div>
       </div>
       <div className="panel-body">
-        <div className="list">
-          {selectedEvents.length === 0 ? (
-            <div className="empty-state">항목 없음</div>
-          ) : (
-            selectedEvents.map((item) => (
-              <article className={`schedule-row category-${item.category}`} key={item.id}>
-                <div className="item-line">
-                  <div>
-                    <div className="item-title">{item.title}</div>
-                    <div className="item-meta">
-                      <span className="tag">
-                        {item.startTime} - {item.endTime}
-                      </span>
-                      <span className="tag">{CATEGORY_LABEL[item.category]}</span>
-                      {item.reminderAt ? <span className="tag">{item.reminderAt.replace("T", " ")}</span> : null}
-                    </div>
-                    {item.note ? <div className="item-note">{item.note}</div> : null}
-                  </div>
-                  <div className="row-actions">
-                    <button className="secondary-button" type="button" onClick={() => openEditModal(item)}>
-                      수정
-                    </button>
-                    <button className="danger-button" type="button" onClick={() => onDeleteEvent(item.id)}>
-                      삭제
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))
+        <EntryList
+          items={selectedEvents}
+          emptyLabel="항목 없음"
+          renderItem={(item) => (
+            <EntryRow
+              key={item.id}
+              className={`schedule-row category-${item.category}`}
+              title={item.title}
+              tags={[
+                `${item.startTime} - ${item.endTime}`,
+                CATEGORY_LABEL[item.category],
+                ...(item.reminderAt ? [item.reminderAt.replace("T", " ")] : [])
+              ]}
+              note={item.note}
+              actions={
+                <>
+                  <button className="secondary-button" type="button" onClick={() => openEditModal(item)}>
+                    수정
+                  </button>
+                  <button className="danger-button" type="button" onClick={() => onDeleteEvent(item.id)}>
+                    삭제
+                  </button>
+                </>
+              }
+            />
           )}
-        </div>
+        />
       </div>
       {modalState ? (
         <EventEditorModal

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { filterNotifications, formatDateTime, sortNotificationsByTime } from "@/src/planner";
 import type { NotificationFilter, PlannerNotification } from "@/src/planner";
+import { EntryList, EntryRow } from "@/src/components/EntryList";
+import { SegmentedControl } from "@/src/components/SegmentedControl";
 
 interface NotificationMenuProps {
   notifications: PlannerNotification[];
@@ -39,46 +41,38 @@ export function NotificationMenu({ notifications, onRead, onSnooze }: Notificati
             </button>
           </div>
           <div className="panel-body">
-            <div className="segmented notification-filter" aria-label="알림 필터">
-              {notificationFilters.map((item) => (
-                <button
-                  type="button"
-                  key={item.value}
-                  className={filter === item.value ? "active" : ""}
-                  onClick={() => setFilter(item.value)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              ariaLabel="알림 필터"
+              className="notification-filter"
+              options={notificationFilters}
+              value={filter}
+              onChange={(next) => setFilter(next)}
+            />
 
-            <div className="list notification-list">
-              {visibleNotifications.length === 0 ? (
-                <div className="empty-state">알림 없음</div>
-              ) : (
-                visibleNotifications.map((notification) => (
-                  <article className={`notification-row ${notification.status}`} key={notification.id}>
-                    <div className="item-line">
-                      <div>
-                        <div className="item-title">{notification.title}</div>
-                        <div className="item-meta">
-                          <span className="tag">{statusLabel[notification.status]}</span>
-                          <span className="tag">{formatDateTime(notification.notifyAt)}</span>
-                        </div>
-                        <div className="item-meta">{notification.body}</div>
-                      </div>
-                      <div className="row-actions">
+            <div className="notification-list">
+              <EntryList
+                items={visibleNotifications}
+                emptyLabel="알림 없음"
+                renderItem={(notification) => (
+                  <EntryRow
+                    key={notification.id}
+                    className={`notification-row ${notification.status}`}
+                    title={notification.title}
+                    tags={[statusLabel[notification.status], formatDateTime(notification.notifyAt)]}
+                    extra={<div className="item-meta">{notification.body}</div>}
+                    actions={
+                      <>
                         <button className="secondary-button" type="button" onClick={() => onSnooze(notification.id, 10)}>
                           +10분
                         </button>
                         <button className="primary-button" type="button" onClick={() => onRead(notification.id)}>
                           확인
                         </button>
-                      </div>
-                    </div>
-                  </article>
-                ))
-              )}
+                      </>
+                    }
+                  />
+                )}
+              />
             </div>
           </div>
         </div>
