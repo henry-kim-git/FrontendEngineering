@@ -4,17 +4,9 @@ import { useState } from "react";
 import { EventEditorModal } from "@/src/components/EventEditorModal";
 import type { EventEditorState } from "@/src/components/EventEditorModal";
 import { createWeekDays, EVENT_CATEGORY_CLASS, eventToDraft, getEventsForDate, getTasksForDate, TASK_PRIORITY_CLASS, todayIso } from "@/src/planner";
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import type { EventDraft, IsoDate, ScheduleEvent, Task } from "@/src/planner";
-
-const START_HOUR = 6;
-const END_HOUR = 23;
-const HOUR_HEIGHT = 56;
-const MIN_EVENT_MINUTES = 30;
-const MIN_TIMELINE_MINUTES = START_HOUR * 60;
-const MAX_TIMELINE_MINUTES = (END_HOUR + 1) * 60;
-const MAX_TIME_INPUT_MINUTES = 23 * 60 + 59;
-const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, index) => START_HOUR + index);
+import { eventStyle, hours, rangeStyle } from "@/src/lib/weekGrid";
+import { useWeekDragSelection } from "@/src/hooks/useWeekDragSelection";
 
 interface WeekTimelineProps {
   tasks: Task[];
@@ -25,82 +17,23 @@ interface WeekTimelineProps {
   onUpdateEvent(id: string, draft: EventDraft): void;
 }
 
-interface DragState {
-  date: IsoDate;
-  start: number;
-  end: number;
-  moved: boolean;
-}
-
 export function WeekTimeline({ tasks, events, selectedDate, onSelectDate, onAddEvent, onUpdateEvent }: WeekTimelineProps) {
   const days = createWeekDays(selectedDate, todayIso());
   const [editor, setEditor] = useState<EventEditorState | null>(null);
-  const [drag, setDrag] = useState<DragState | null>(null);
-
-  function startDrag(event: ReactPointerEvent<HTMLDivElement>, date: IsoDate) {
-    if (event.button !== 0) {
-      return;
-    }
-
-    const minutes = minutesFromPointer(event);
-    onSelectDate(date);
-    setDrag({ date, start: minutes, end: minutes, moved: false });
-    event.currentTarget.setPointerCapture(event.pointerId);
-    event.preventDefault();
-  }
-
-  function moveDrag(event: ReactPointerEvent<HTMLDivElement>, date: IsoDate) {
-    const end = minutesFromPointer(event);
-
-    setDrag((current) => {
-      if (!current || current.date !== date) {
-        return current;
-      }
-
-      return {
-        ...current,
-        end,
-        moved: current.moved || Math.abs(end - current.start) >= 15
-      };
-    });
-  }
-
-  function finishDrag(event: ReactPointerEvent<HTMLDivElement>, date: IsoDate) {
-    if (!drag || drag.date !== date) {
-      return;
-    }
-
-    event.currentTarget.releasePointerCapture(event.pointerId);
-    let start = Math.min(drag.start, drag.end);
-    let end = Math.max(drag.start, drag.end);
-
-    if (end - start < MIN_EVENT_MINUTES) {
-      if (start + MIN_EVENT_MINUTES <= MAX_TIMELINE_MINUTES) {
-        end = start + MIN_EVENT_MINUTES;
-      } else {
-        end = MAX_TIMELINE_MINUTES;
-        start = Math.max(MIN_TIMELINE_MINUTES, end - MIN_EVENT_MINUTES);
-      }
-    }
-
-    setDrag(null);
-    if (!drag.moved) {
-      return;
-    }
-
+  const { drag, startDrag, moveDrag, finishDrag, cancelDrag } = useWeekDragSelection(onSelectDate, (result) => {
     setEditor({
       mode: "create",
       draft: {
         title: "",
-        date,
-        startTime: minutesToTime(start),
-        endTime: minutesToTime(end),
+        date: result.date,
+        startTime: result.startTime,
+        endTime: result.endTime,
         category: "work",
         note: "",
         reminderAt: null
       }
     });
-  }
+  });
 
   return (
     <section className="week-board">
@@ -159,7 +92,7 @@ export function WeekTimeline({ tasks, events, selectedDate, onSelectDate, onAddE
                 onPointerDown={(event) => startDrag(event, day.date)}
                 onPointerMove={(event) => moveDrag(event, day.date)}
                 onPointerUp={(event) => finishDrag(event, day.date)}
-                onPointerCancel={() => setDrag(null)}
+                onPointerCancel={cancelDrag}
               >
                 <span className="week-hour-lines">
                   {hours.map((hour) => (
@@ -211,46 +144,3 @@ export function WeekTimeline({ tasks, events, selectedDate, onSelectDate, onAddE
     </section>
   );
 }
-
-function eventStyle(event: ScheduleEvent): CSSProperties {
-  const start = clampMinutes(timeToMinutes(event.startTime));
-  const end = Math.max(start + MIN_EVENT_MINUTES, clampMinutes(timeToMinutes(event.endTime)));
-  return rangeStyle(start, end);
-}
-
-function rangeStyle(startValue: number, endValue: number): CSSProperties {
-  const start = Math.min(startValue, endValue);
-  const end = Math.max(startValue, endValue);
-  return {
-    top: `${((start - START_HOUR * 60) / 60) * HOUR_HEIGHT}px`,
-    height: `${Math.max(28, ((end - start) / 60) * HOUR_HEIGHT - 4)}px`
-  };
-}
-
-function timeToMinutes(value: string): number {
-  const [hour = "0", minute = "0"] = value.split(":");
-  return Number(hour) * 60 + Number(minute);
-}
-
-function clampMinutes(value: number): number {
-  return Math.min(MAX_TIMELINE_MINUTES, Math.max(MIN_TIMELINE_MINUTES, value));
-}
-
-function minutesFromPointer(event: ReactPointerEvent<HTMLDivElement>): number {
-  const rect = event.currentTarget.getBoundingClientRect();
-  const y = Math.max(0, event.clientY - rect.top);
-  const rawMinutes = START_HOUR * 60 + (y / HOUR_HEIGHT) * 60;
-  return roundToStep(clampMinutes(rawMinutes), 15);
-}
-
-function roundToStep(value: number, step: number): number {
-  return Math.round(value / step) * step;
-}
-
-function minutesToTime(value: number): string {
-  const safeValue = Math.min(MAX_TIME_INPUT_MINUTES, Math.max(0, value));
-  const hour = Math.floor(safeValue / 60);
-  const minute = safeValue % 60;
-  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-}
-
