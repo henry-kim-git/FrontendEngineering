@@ -2,7 +2,8 @@
 
 import { useEffect, useReducer } from "react";
 import type { EventDraft, IsoDate, TaskDraft } from "@/src/planner";
-import { plannerReducer, readPlannerState, STORAGE_KEY } from "./plannerReducer";
+import { loadPlannerState, savePlannerState } from "@/src/repositories/plannerRepository";
+import { plannerReducer } from "./plannerReducer";
 import { useLocalStorageSync } from "./useLocalStorageSync";
 import { useNotificationPoller } from "./useNotificationPoller";
 
@@ -10,10 +11,10 @@ export function usePlannerStore() {
   const [state, dispatch] = useReducer(plannerReducer, undefined);
 
   useEffect(() => {
-    dispatch({ type: "replace", state: readPlannerState() });
+    dispatch({ type: "replace", state: loadPlannerState() });
   }, []);
 
-  useLocalStorageSync(state, STORAGE_KEY);
+  useLocalStorageSync(state, savePlannerState);
   useNotificationPoller(dispatch);
 
   return {

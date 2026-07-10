@@ -5,6 +5,8 @@ import { filterTasks, makeDefaultTaskDraft, toTaskViewModel } from "@/src/planne
 import type { IsoDate, Task, TaskDraft, TaskFilter, TaskViewModel } from "@/src/planner";
 import { TaskEditorModal } from "@/src/components/TaskEditorModal";
 import type { TaskEditorState } from "@/src/components/TaskEditorModal";
+import { EntryList, EntryRow } from "@/src/components/EntryList";
+import { SegmentedControl } from "@/src/components/SegmentedControl";
 
 interface TaskPanelProps {
   selectedDate: IsoDate;
@@ -37,56 +39,44 @@ export function TaskPanel({ selectedDate, tasks, onAddTask, onUpdateTask, onTogg
       <div className="panel-header">
         <h2>할 일</h2>
         <div className="panel-actions">
-          <div className="segmented" aria-label="할 일 필터">
-            {taskFilters.map((item) => (
-              <button
-                type="button"
-                key={item.value}
-                className={filter === item.value ? "active" : ""}
-                onClick={() => setFilter(item.value)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            ariaLabel="할 일 필터"
+            options={taskFilters}
+            value={filter}
+            onChange={(next) => setFilter(next)}
+          />
           <button className="primary-button" type="button" onClick={openCreateModal}>
             추가
           </button>
         </div>
       </div>
       <div className="panel-body">
-        <div className="list">
-          {visibleTasks.length === 0 ? (
-            <div className="empty-state">항목 없음</div>
-          ) : (
-            visibleTasks.map((vm) => (
-              <article className={vm.rowClassName} key={vm.id}>
-                <div className="item-line">
-                  <div>
-                    <div className="item-title">{vm.title}</div>
-                    <div className="item-meta">
-                      <span className="tag">{vm.dueDateFormatted}</span>
-                      <span className="tag">{vm.priorityLabel}</span>
-                      {vm.reminderFormatted ? <span className="tag">{vm.reminderFormatted}</span> : null}
-                    </div>
-                    {vm.note ? <div className="item-note">{vm.note}</div> : null}
-                  </div>
-                  <div className="row-actions">
-                    <button className="secondary-button" type="button" onClick={() => openEditModal(vm)}>
-                      수정
-                    </button>
-                    <button className="secondary-button" type="button" onClick={() => onToggleTask(vm.id)}>
-                      {vm.toggleLabel}
-                    </button>
-                    <button className="danger-button" type="button" onClick={() => onDeleteTask(vm.id)}>
-                      삭제
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))
+        <EntryList
+          items={visibleTasks}
+          emptyLabel="항목 없음"
+          renderItem={(vm) => (
+            <EntryRow
+              key={vm.id}
+              className={vm.rowClassName}
+              title={vm.title}
+              tags={[vm.dueDateFormatted, vm.priorityLabel, ...(vm.reminderFormatted ? [vm.reminderFormatted] : [])]}
+              note={vm.note}
+              actions={
+                <>
+                  <button className="secondary-button" type="button" onClick={() => openEditModal(vm)}>
+                    수정
+                  </button>
+                  <button className="secondary-button" type="button" onClick={() => onToggleTask(vm.id)}>
+                    {vm.toggleLabel}
+                  </button>
+                  <button className="danger-button" type="button" onClick={() => onDeleteTask(vm.id)}>
+                    삭제
+                  </button>
+                </>
+              }
+            />
           )}
-        </div>
+        />
       </div>
       {modalState ? (
         <TaskEditorModal
