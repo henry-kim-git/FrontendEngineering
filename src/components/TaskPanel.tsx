@@ -58,6 +58,7 @@ export function TaskPanel({ selectedDate, tasks, onAddTask, onUpdateTask, onTogg
             <EntryRow
               key={vm.id}
               className={vm.rowClassName}
+              layout="stacked"
               title={vm.title}
               tags={[vm.dueDateFormatted, vm.priorityLabel, ...(vm.reminderFormatted ? [vm.reminderFormatted] : [])]}
               note={vm.note}

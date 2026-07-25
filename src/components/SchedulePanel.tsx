@@ -50,6 +50,7 @@ export function SchedulePanel({ selectedDate, events, onAddEvent, onUpdateEvent,
             <EntryRow
               key={item.id}
               className={`schedule-row category-${item.category}`}
+              layout="stacked"
               title={item.title}
               tags={[
                 `${item.startTime} - ${item.endTime}`,

@@ -17,7 +17,8 @@ export function EntryList<T>({ items, emptyLabel, renderItem }: EntryListProps<T
 }
 
 interface EntryRowProps {
-  className: string;
+  className?: string;
+  layout?: "row" | "stacked";
   title: string;
   tags: ReactNode[];
   extra?: ReactNode;
@@ -25,9 +26,13 @@ interface EntryRowProps {
   actions: ReactNode;
 }
 
-export function EntryRow({ className, title, tags, extra, note, actions }: EntryRowProps) {
+export function EntryRow({ className, layout = "row", title, tags, extra, note, actions }: EntryRowProps) {
+  const rootClassName = ["entry-row", layout === "stacked" ? "entry-row--stacked" : "", className]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <article className={className}>
+    <article className={rootClassName}>
       <div className="item-line">
         <div>
           <div className="item-title">{title}</div>
